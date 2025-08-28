@@ -1,0 +1,4 @@
+session_id,timestamp,risk_level
+1,0,low
+1,1,medium
+2,0,high
