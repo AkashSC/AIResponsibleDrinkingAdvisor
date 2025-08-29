@@ -20,8 +20,8 @@ st.sidebar.markdown("### 🤖 AI Advisor")
 user_question = st.sidebar.text_area("Ask your AI Advisor:")
 if st.sidebar.button("Get Advice"):
     if user_question.strip():
-        # Call your AI advisor logic here
-        ai_response = advisor.get_ai_advice(user_question)  # <-- you implement this
+        # Placeholder response (you can replace this later with real AI logic)
+        ai_response = f"🔎 Advisor Response:\n\nI understand your question: *'{user_question}'*. \n\nFor now, I'm giving placeholder advice. Please drink responsibly! 🍺"
         st.sidebar.success(ai_response)
     else:
         st.sidebar.warning("Please enter a question before clicking Get Advisor.")
