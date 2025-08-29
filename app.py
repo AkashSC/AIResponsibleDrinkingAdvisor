@@ -15,6 +15,17 @@ gender = st.sidebar.selectbox("Gender", ["M", "F"])
 hours = st.sidebar.slider("Hours since drinking started", 0.0, 12.0, 1.0)
 asked_to_drive = st.sidebar.checkbox("Asked to drive?")
 
+# --- AI Advisor input ---
+st.sidebar.markdown("### 🤖 AI Advisor")
+user_question = st.sidebar.text_area("Ask your AI Advisor:")
+if st.sidebar.button("Get Advisor"):
+    if user_question.strip():
+        # Call your AI advisor logic here
+        ai_response = advisor.get_ai_advice(user_question)  # <-- you implement this
+        st.sidebar.success(ai_response)
+    else:
+        st.sidebar.warning("Please enter a question before clicking Get Advisor.")
+      
 # Calculate
 grams = advisor.grams_of_alcohol(volume_ml, abv)
 bac = advisor.estimate_bac_percent(grams, weight, gender, hours)
