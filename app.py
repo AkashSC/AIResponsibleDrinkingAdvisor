@@ -18,7 +18,7 @@ asked_to_drive = st.sidebar.checkbox("Asked to drive?")
 # --- AI Advisor input ---
 st.sidebar.markdown("### 🤖 AI Advisor")
 user_question = st.sidebar.text_area("Ask your AI Advisor:")
-if st.sidebar.button("Get Advisor"):
+if st.sidebar.button("Get Advice"):
     if user_question.strip():
         # Call your AI advisor logic here
         ai_response = advisor.get_ai_advice(user_question)  # <-- you implement this
