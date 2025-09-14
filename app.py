@@ -66,6 +66,18 @@ def estimate_bac_percent(grams, weight, gender, hours):
     bac = (grams / (weight * r)) * 100 - (0.015 * hours)
     return max(bac, 0)
 
+def classify_risk(bac):
+    if bac == 0:
+        return "Sober"
+    elif bac < 0.03:
+        return "Low"
+    elif bac < 0.08:
+        return "Moderate"
+    elif bac < 0.20:
+        return "High"
+    else:
+        return "Very High"
+
 # -----------------------------
 # Streamlit UI
 # -----------------------------
@@ -78,19 +90,17 @@ abv = st.sidebar.slider("Alcohol % (ABV)", 0.0, 50.0, 5.0)
 weight = st.sidebar.number_input("Body weight (kg)", min_value=40, max_value=150, value=70)
 gender = st.sidebar.selectbox("Gender", ["M", "F"])
 hours = st.sidebar.slider("Hours since drinking started", 0.0, 12.0, 1.0)
-asked_to_drive = st.sidebar.checkbox("Asked to drive?")
 
-# Calculate BAC
+# Calculate BAC & Risk
 grams = grams_of_alcohol(volume_ml, abv)
 bac = estimate_bac_percent(grams, weight, gender, hours)
+risk = classify_risk(bac)
 
 # Generate AI advice dynamically
 prompt = f"""
 My BAC is estimated at {bac:.3f}%. 
 I am a {weight}kg {gender} who drank {volume_ml}ml at {abv}% ABV over {hours} hours.
-Should I consider driving: {asked_to_drive}?
-
-Give me short responsible advice.
+Provide short advice on responsible drinking and also include driving safety instructions.
 """
 llm_advice = get_llm_response(prompt)
 
@@ -110,11 +120,13 @@ speech_advice = f"{llm_advice}. Responsible Drinking Tip: {extra_tip}"
 
 # Display Results
 st.metric("Estimated BAC (%)", f"{bac:.3f}")
+st.metric("Risk Level", risk)
 
 col1, col2 = st.columns([4,1])
 with col1:
     st.subheader("AI-Generated Advice")
 with col2:
+    # Reads the advice currently displayed (no refresh)
     if st.button("🔊 Read Out"):
         text_to_speech(speech_advice)
 
