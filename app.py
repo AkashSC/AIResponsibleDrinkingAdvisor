@@ -101,8 +101,16 @@ llm_advice = get_llm_response(llm_advice_prompt)
 st.metric("Estimated BAC (%)", f"{bac:.3f}")
 st.metric("Risk Level", risk.capitalize())
 
-st.write("### 🤖 AI-Generated Advice")
+# --- AI Advice Section with button in header ---
+col1, col2 = st.columns([4,1])
+with col1:
+    st.subheader("🤖 AI-Generated Advice")
+with col2:
+    if st.button("🔊 Read Out"):
+        text_to_speech(llm_advice)
+
 st.info(llm_advice)
+
 
 # --- Button for TTS ---
 if st.button("🔊 Read Out Advice"):
