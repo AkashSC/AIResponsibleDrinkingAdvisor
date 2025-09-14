@@ -1,5 +1,5 @@
 import streamlit as st
-import requests, os, json, random
+import requests, os, random
 from gtts import gTTS
 import base64
 
@@ -93,29 +93,31 @@ bac = estimate_bac_percent(grams, weight, gender, hours)
 risk = classify_risk(bac)
 
 # -----------------------------
-# Generate AI advice (once)
+# Generate advice dynamically when inputs change
 # -----------------------------
-if "llm_advice" not in st.session_state:
+# Create a key representing current input state
+input_key = f"{volume_ml}_{abv}_{weight}_{gender}_{hours}"
+
+if "advice_key" not in st.session_state or st.session_state.advice_key != input_key:
     prompt = f"""
     My BAC is estimated at {bac:.3f}%. 
     I am a {weight}kg {gender} who drank {volume_ml}ml at {abv}% ABV over {hours} hours.
-    Provide short advice on responsible drinking and include driving safety instructions.
-    Keep it concise (~8-10 lines).
+    Provide short, friendly advice on responsible drinking including driving safety.
+    Keep the advice strictly 8-10 lines.
     """
-    st.session_state.llm_advice = get_llm_response(prompt)
+    llm_advice = get_llm_response(prompt)
+    responsible_tips = [
+        "Stay hydrated — drink water between drinks.",
+        "Eat before and while drinking.",
+        "Never drink and drive; arrange safe transport.",
+        "Pace yourself — one drink per hour.",
+        "Track your intake to stay aware."
+    ]
+    extra_tip = random.choice(responsible_tips)
+    combined_advice = f"{llm_advice}\n\n---\n✅ Tip: {extra_tip}"
 
-# Add responsible drinking tip
-responsible_tips = [
-    "Stay hydrated — drink water between drinks.",
-    "Eat before and while drinking.",
-    "Never drink and drive; arrange safe transport.",
-    "Pace yourself — one drink per hour.",
-    "Track your intake to stay aware."
-]
-extra_tip = random.choice(responsible_tips)
-
-display_advice = f"{st.session_state.llm_advice}\n\n---\n✅ Tip: {extra_tip}"
-speech_advice = f"{st.session_state.llm_advice}. Tip: {extra_tip}"
+    st.session_state.llm_advice = combined_advice
+    st.session_state.advice_key = input_key
 
 # Display Results
 st.metric("Estimated BAC (%)", f"{bac:.3f}")
@@ -126,6 +128,6 @@ with col1:
     st.subheader("AI-Generated Advice")
 with col2:
     if st.button("🔊 Read Out"):
-        text_to_speech(speech_advice)
+        text_to_speech(st.session_state.llm_advice)
 
-st.info(display_advice)
+st.info(st.session_state.llm_advice)
