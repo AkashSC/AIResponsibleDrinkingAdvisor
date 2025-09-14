@@ -96,15 +96,17 @@ llm_advice = get_llm_response(prompt)
 
 # Add responsible drinking tips
 responsible_tips = [
-    "💧 Stay hydrated — drink water between alcoholic drinks.",
-    "🍽️ Eat before and while drinking to slow alcohol absorption.",
-    "🚗 Never drink and drive. Arrange safe transport instead.",
-    "🕒 Pace yourself — stick to one standard drink per hour.",
-    "📱 Track your intake to avoid surprises."
+    "Stay hydrated — drink water between alcoholic drinks.",
+    "Eat before and while drinking to slow alcohol absorption.",
+    "Never drink and drive. Arrange safe transport instead.",
+    "Pace yourself — stick to one standard drink per hour.",
+    "Track your intake to avoid surprises."
 ]
 extra_tip = random.choice(responsible_tips)
 
-final_advice = f"{llm_advice}\n\n---\n✅ **Responsible Drinking Tip:** {extra_tip}"
+# Separate display vs speech advice
+display_advice = f"{llm_advice}\n\n---\n✅ Responsible Drinking Tip: {extra_tip}"
+speech_advice = f"{llm_advice}. Responsible Drinking Tip: {extra_tip}"
 
 # Display Results
 st.metric("Estimated BAC (%)", f"{bac:.3f}")
@@ -114,6 +116,6 @@ with col1:
     st.subheader("AI-Generated Advice")
 with col2:
     if st.button("🔊 Read Out"):
-        text_to_speech(final_advice)
+        text_to_speech(speech_advice)
 
-st.info(final_advice)
+st.info(display_advice)
