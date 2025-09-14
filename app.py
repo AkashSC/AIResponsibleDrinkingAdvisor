@@ -1,31 +1,26 @@
 import streamlit as st
-import requests
-import json
-import os
-import base64
+import requests, os, json, random
 from gtts import gTTS
-
-st.title("🍺 AI Responsible Drinking Advisor")
+import base64
 
 # -----------------------------
-# Core Functions
+# Text-to-Speech
 # -----------------------------
-def grams_of_alcohol(volume_ml, abv):
-    return volume_ml * (abv / 100) * 0.789  # ethanol density (g/ml)
-
-def estimate_bac_percent(grams, weight, gender, hours):
-    r = 0.68 if gender == "M" else 0.55
-    bac = (grams / (weight * r)) * 100
-    bac = bac - (0.015 * hours)  # elimination rate
-    return max(bac, 0)
-
-def classify_risk(bac):
-    if bac < 0.03:
-        return "low"
-    elif bac < 0.08:
-        return "moderate"
-    else:
-        return "high"
+def text_to_speech(text: str):
+    try:
+        tts = gTTS(text=text, lang="en")
+        tts.save("advice.mp3")
+        with open("advice.mp3", "rb") as f:
+            audio_bytes = f.read()
+        b64 = base64.b64encode(audio_bytes).decode()
+        md = f"""
+            <audio autoplay controls>
+                <source src="data:audio/mp3;base64,{b64}" type="audio/mp3">
+            </audio>
+        """
+        st.markdown(md, unsafe_allow_html=True)
+    except Exception as e:
+        st.error(f"❌ Text-to-Speech Error: {e}")
 
 # -----------------------------
 # LLM Response Function (Groq)
@@ -44,11 +39,11 @@ def get_llm_response(prompt: str) -> str:
     payload = {
         "model": "llama-3.1-8b-instant",
         "messages": [
-            {"role": "system", "content": "You are a responsible drinking AI advisor. Always mention the user's BAC %, then provide short, safe, empathetic advice (2–3 sentences)."},
+            {"role": "system", "content": "You are a helpful AI responsible drinking advisor."},
             {"role": "user", "content": prompt}
         ],
-        "temperature": 0.6,
-        "max_tokens": 150
+        "temperature": 0.7,
+        "max_tokens": 400
     }
 
     try:
@@ -61,23 +56,22 @@ def get_llm_response(prompt: str) -> str:
         return f"❌ Unexpected Error: {e}"
 
 # -----------------------------
-# Text-to-Speech (TTS)
+# BAC Calculation
 # -----------------------------
-def text_to_speech(text: str):
-    tts = gTTS(text)
-    tts.save("advice.mp3")
-    with open("advice.mp3", "rb") as f:
-        b64_audio = base64.b64encode(f.read()).decode()
-    audio_html = f"""
-        <audio autoplay controls>
-            <source src="data:audio/mp3;base64,{b64_audio}" type="audio/mp3">
-        </audio>
-    """
-    st.markdown(audio_html, unsafe_allow_html=True)
+def grams_of_alcohol(volume_ml, abv):
+    return volume_ml * (abv / 100) * 0.789  # 0.789 g/ml ethanol density
+
+def estimate_bac_percent(grams, weight, gender, hours):
+    r = 0.68 if gender == "M" else 0.55
+    bac = (grams / (weight * r)) * 100 - (0.015 * hours)
+    return max(bac, 0)
 
 # -----------------------------
-# Sidebar Input
+# Streamlit UI
 # -----------------------------
+st.title("🍺 AI Responsible Drinking Advisor")
+
+# Sidebar Input
 st.sidebar.header("User Input")
 volume_ml = st.sidebar.number_input("Drink volume (ml)", min_value=0, value=330)
 abv = st.sidebar.slider("Alcohol % (ABV)", 0.0, 50.0, 5.0)
@@ -86,49 +80,40 @@ gender = st.sidebar.selectbox("Gender", ["M", "F"])
 hours = st.sidebar.slider("Hours since drinking started", 0.0, 12.0, 1.0)
 asked_to_drive = st.sidebar.checkbox("Asked to drive?")
 
-# -----------------------------
-# Calculations
-# -----------------------------
+# Calculate BAC
 grams = grams_of_alcohol(volume_ml, abv)
 bac = estimate_bac_percent(grams, weight, gender, hours)
-risk = classify_risk(bac)
 
-# -----------------------------
-# AI Advice (auto-updates with inputs)
-# -----------------------------
-session_summary = f"""
-Drink Volume: {volume_ml} ml
-ABV: {abv}%
-Weight: {weight} kg
-Gender: {gender}
-Hours since drinking started: {hours}
-Estimated BAC: {bac:.3f}%
-Risk Level: {risk}
-Asked to drive: {asked_to_drive}
+# Generate AI advice dynamically
+prompt = f"""
+My BAC is estimated at {bac:.3f}%. 
+I am a {weight}kg {gender} who drank {volume_ml}ml at {abv}% ABV over {hours} hours.
+Should I consider driving: {asked_to_drive}?
+
+Give me short responsible advice.
 """
+llm_advice = get_llm_response(prompt)
 
-llm_advice_prompt = f"""
-The user's estimated BAC is {bac:.3f}%. 
-Based on this drinking session summary, give short and clear advice (2–3 sentences max). 
-Be empathetic, safe, and practical.
+# Add responsible drinking tips
+responsible_tips = [
+    "💧 Stay hydrated — drink water between alcoholic drinks.",
+    "🍽️ Eat before and while drinking to slow alcohol absorption.",
+    "🚗 Never drink and drive. Arrange safe transport instead.",
+    "🕒 Pace yourself — stick to one standard drink per hour.",
+    "📱 Track your intake to avoid surprises."
+]
+extra_tip = random.choice(responsible_tips)
 
-Session details:
-{session_summary}
-"""
+final_advice = f"{llm_advice}\n\n---\n✅ **Responsible Drinking Tip:** {extra_tip}"
 
-llm_advice = get_llm_response(llm_advice_prompt)
-
-# -----------------------------
-# Display
-# -----------------------------
+# Display Results
 st.metric("Estimated BAC (%)", f"{bac:.3f}")
-st.metric("Risk Level", risk.capitalize())
 
-col1, col2 = st.columns([1,1])
+col1, col2 = st.columns([4,1])
 with col1:
-    st.subheader("### 🤖 AI-Generated Advice")
+    st.subheader("AI-Generated Advice")
 with col2:
     if st.button("🔊 Read Out"):
-        text_to_speech(llm_advice)
+        text_to_speech(final_advice)
 
-st.info(llm_advice)
+st.info(final_advice)
