@@ -114,4 +114,18 @@ responsible_tips = [
 ]
 extra_tip = random.choice(responsible_tips)
 
-displ
+display_advice = f"{st.session_state.llm_advice}\n\n---\n✅ Tip: {extra_tip}"
+speech_advice = f"{st.session_state.llm_advice}. Tip: {extra_tip}"
+
+# Display Results
+st.metric("Estimated BAC (%)", f"{bac:.3f}")
+st.metric("Risk Level", risk)
+
+col1, col2 = st.columns([4,1])
+with col1:
+    st.subheader("AI-Generated Advice")
+with col2:
+    if st.button("🔊 Read Out"):
+        text_to_speech(speech_advice)
+
+st.info(display_advice)
