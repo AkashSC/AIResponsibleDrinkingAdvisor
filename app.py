@@ -11,12 +11,12 @@ st.title("🍺 AI Responsible Drinking Advisor")
 # Core Functions
 # -----------------------------
 def grams_of_alcohol(volume_ml, abv):
-    return volume_ml * (abv / 100) * 0.789  # 0.789 g/ml is ethanol density
+    return volume_ml * (abv / 100) * 0.789  # ethanol density (g/ml)
 
 def estimate_bac_percent(grams, weight, gender, hours):
     r = 0.68 if gender == "M" else 0.55
     bac = (grams / (weight * r)) * 100
-    bac = bac - (0.015 * hours)  # natural elimination rate
+    bac = bac - (0.015 * hours)  # elimination rate
     return max(bac, 0)
 
 def classify_risk(bac):
@@ -44,11 +44,11 @@ def get_llm_response(prompt: str) -> str:
     payload = {
         "model": "llama-3.1-8b-instant",
         "messages": [
-            {"role": "system", "content": "You are a responsible drinking AI advisor. Provide short, safe, empathetic advice (2–3 sentences)."},
+            {"role": "system", "content": "You are a responsible drinking AI advisor. Always mention the user's BAC %, then provide short, safe, empathetic advice (2–3 sentences)."},
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.6,
-        "max_tokens": 120
+        "max_tokens": 150
     }
 
     try:
@@ -108,7 +108,9 @@ Asked to drive: {asked_to_drive}
 """
 
 llm_advice_prompt = f"""
-Based on this drinking session summary, give short and clear advice (2–3 sentences max).
+The user's estimated BAC is {bac:.3f}%. 
+Based on this drinking session summary, give short and clear advice (2–3 sentences max). 
+Be empathetic, safe, and practical.
 
 Session details:
 {session_summary}
