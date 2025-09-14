@@ -102,7 +102,7 @@ st.metric("Estimated BAC (%)", f"{bac:.3f}")
 st.metric("Risk Level", risk.capitalize())
 
 # --- AI Advice Section with button in header ---
-col1, col2 = st.columns([2,1])
+col1, col2 = st.columns([1,1])
 with col1:
     st.subheader("🤖 AI-Generated Advice")
 with col2:
