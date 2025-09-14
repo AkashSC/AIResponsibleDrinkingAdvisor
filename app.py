@@ -2,12 +2,9 @@ import streamlit as st
 import requests
 import json
 import os
-from utils import data_loader, advisor
+from utils import advisor
 
 st.title("🍺 AI Responsible Drinking Advisor")
-
-# Load datasets (kept for future use, but no visuals now)
-events, sessions, users, bac_series = data_loader.load_all()
 
 # Sidebar input
 st.sidebar.header("User Input")
@@ -22,12 +19,11 @@ asked_to_drive = st.sidebar.checkbox("Asked to drive?")
 grams = advisor.grams_of_alcohol(volume_ml, abv)
 bac = advisor.estimate_bac_percent(grams, weight, gender, hours)
 risk = advisor.classify_risk(bac)
-advice = advisor.advice_bundle(bac, 1, asked_to_drive)
 
 # -----------------------------
 # LLM Response Function (Groq)
 # -----------------------------
-def get_llm_response(prompt: str, data_summary: str = "") -> str:
+def get_llm_response(prompt: str) -> str:
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
         return "❌ GROQ_API_KEY environment variable not set in Render."
@@ -38,34 +34,11 @@ def get_llm_response(prompt: str, data_summary: str = "") -> str:
         "Content-Type": "application/json"
     }
 
-    clean_prompt = prompt.strip()
-    if not clean_prompt:
-        return "⚠️ Please enter a valid question."
-
-    # Combine query + dataset context
-    full_prompt = f"""
-    You are an AI responsible drinking advisor.
-    Use the BAC calculation and user details below to answer clearly and responsibly.
-
-    Session summary:
-    - Drink Volume: {volume_ml} ml
-    - ABV: {abv}%
-    - Weight: {weight} kg
-    - Gender: {gender}
-    - Hours since drinking started: {hours}
-    - Estimated BAC: {bac:.3f}%
-    - Risk Level: {risk}
-    - Asked to drive: {asked_to_drive}
-
-    Question:
-    {clean_prompt}
-    """
-
     payload = {
-        "model": "llama-3.1-8b-instant",  # ✅ supported Groq model
+        "model": "llama-3.1-8b-instant",
         "messages": [
-            {"role": "system", "content": "You are a helpful AI advisor for responsible drinking."},
-            {"role": "user", "content": full_prompt}
+            {"role": "system", "content": "You are a responsible drinking AI advisor. Provide safe, clear, and empathetic advice based on user BAC and context."},
+            {"role": "user", "content": prompt}
         ],
         "temperature": 0.7,
         "max_tokens": 512
@@ -88,23 +61,48 @@ def get_llm_response(prompt: str, data_summary: str = "") -> str:
         return f"❌ Unexpected Error: {e}"
 
 
-# --- Main Tabs ---
-tab1, tab2 = st.tabs(["📊 BAC & Risk Results", "🤖 AI Advisor"])
+# --- Generate Automated LLM Advice ---
+session_summary = f"""
+Drink Volume: {volume_ml} ml
+ABV: {abv}%
+Weight: {weight} kg
+Gender: {gender}
+Hours since drinking started: {hours}
+Estimated BAC: {bac:.3f}%
+Risk Level: {risk}
+Asked to drive: {asked_to_drive}
+"""
 
-with tab1:
-    st.metric("Estimated BAC (%)", f"{bac:.3f}")
-    st.metric("Risk Level", risk.capitalize())
-    st.write("### Advice")
-    st.info(advice)
+llm_advice_prompt = f"""
+Based on this drinking session summary, provide safe and responsible advice.
 
-with tab2:
-    st.subheader("Ask your Responsible Drinking AI Advisor")
-    user_question = st.text_area("Enter your question here:")
-    if st.button("Get AI Advice"):
-        if user_question.strip():
-            data_summary = f"BAC={bac:.3f}, Risk={risk}, Weight={weight}, Gender={gender}, Hours={hours}"
-            ai_response = get_llm_response(user_question, data_summary)
-            st.markdown("### 🔎 Advisor Response")
-            st.write(ai_response)
-        else:
-            st.warning("Please enter a question before clicking Get AI Advice.")
+Session details:
+{session_summary}
+"""
+
+llm_advice = get_llm_response(llm_advice_prompt)
+
+# --- Main Content ---
+st.metric("Estimated BAC (%)", f"{bac:.3f}")
+st.metric("Risk Level", risk.capitalize())
+
+st.write("### 🤖 AI-Generated Advice")
+st.info(llm_advice)
+
+# --- Sidebar: Interactive AI Advisor ---
+st.sidebar.markdown("### Chat with AI Advisor")
+user_question = st.sidebar.text_area("Ask a question about your drinking session:")
+if st.sidebar.button("Get Advisor Response"):
+    if user_question.strip():
+        full_prompt = f"""
+        Session summary:
+        {session_summary}
+
+        Question:
+        {user_question}
+        """
+        ai_response = get_llm_response(full_prompt)
+        st.sidebar.markdown("### 🔎 Advisor Response")
+        st.sidebar.write(ai_response)
+    else:
+        st.sidebar.warning("Please enter a question before clicking.")
