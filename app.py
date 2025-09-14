@@ -81,7 +81,7 @@ st.title("🍺 AI Responsible Drinking Advisor")
 
 # Sidebar Input
 st.sidebar.header("User Input")
-volume_ml = st.sidebar.number_input("Drink volume (ml)", min_value=0, value=100)
+volume_ml = st.sidebar.number_input("Drink volume (ml)", min_value=0, value=330)
 abv = st.sidebar.slider("Alcohol % (ABV)", 0.0, 50.0, 5.0)
 weight = st.sidebar.number_input("Body weight (kg)", min_value=40, max_value=150, value=70)
 gender = st.sidebar.selectbox("Gender", ["M", "F"])
