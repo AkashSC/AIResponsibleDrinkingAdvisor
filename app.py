@@ -28,14 +28,10 @@ def text_to_speech(text: str):
 def get_llm_response(prompt: str) -> str:
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
-        return "❌ GROQ_API_KEY environment variable not set in Render."
+        return "❌ GROQ_API_KEY environment variable not set."
 
     url = "https://api.groq.com/openai/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload = {
         "model": "llama-3.1-8b-instant",
         "messages": [
@@ -59,7 +55,7 @@ def get_llm_response(prompt: str) -> str:
 # BAC Calculation
 # -----------------------------
 def grams_of_alcohol(volume_ml, abv):
-    return volume_ml * (abv / 100) * 0.789  # 0.789 g/ml ethanol density
+    return volume_ml * (abv / 100) * 0.789
 
 def estimate_bac_percent(grams, weight, gender, hours):
     r = 0.68 if gender == "M" else 0.55
@@ -96,38 +92,26 @@ grams = grams_of_alcohol(volume_ml, abv)
 bac = estimate_bac_percent(grams, weight, gender, hours)
 risk = classify_risk(bac)
 
-# Generate AI advice dynamically
-prompt = f"""
-My BAC is estimated at {bac:.3f}%. 
-I am a {weight}kg {gender} who drank {volume_ml}ml at {abv}% ABV over {hours} hours.
-Provide short advice on responsible drinking and also include driving safety instructions.
-"""
-llm_advice = get_llm_response(prompt)
+# -----------------------------
+# Generate AI advice (once)
+# -----------------------------
+if "llm_advice" not in st.session_state:
+    prompt = f"""
+    My BAC is estimated at {bac:.3f}%. 
+    I am a {weight}kg {gender} who drank {volume_ml}ml at {abv}% ABV over {hours} hours.
+    Provide short advice on responsible drinking and include driving safety instructions.
+    Keep it concise (~8-10 lines).
+    """
+    st.session_state.llm_advice = get_llm_response(prompt)
 
-# Add responsible drinking tips
+# Add responsible drinking tip
 responsible_tips = [
-    "Stay hydrated — drink water between alcoholic drinks.",
-    "Eat before and while drinking to slow alcohol absorption.",
-    "Never drink and drive. Arrange safe transport instead.",
-    "Pace yourself — stick to one standard drink per hour.",
-    "Track your intake to avoid surprises."
+    "Stay hydrated — drink water between drinks.",
+    "Eat before and while drinking.",
+    "Never drink and drive; arrange safe transport.",
+    "Pace yourself — one drink per hour.",
+    "Track your intake to stay aware."
 ]
 extra_tip = random.choice(responsible_tips)
 
-# Separate display vs speech advice
-display_advice = f"{llm_advice}\n\n---\n✅ Responsible Drinking Tip: {extra_tip}"
-speech_advice = f"{llm_advice}. Responsible Drinking Tip: {extra_tip}"
-
-# Display Results
-st.metric("Estimated BAC (%)", f"{bac:.3f}")
-st.metric("Risk Level", risk)
-
-col1, col2 = st.columns([4,1])
-with col1:
-    st.subheader("AI-Generated Advice")
-with col2:
-    # Reads the advice currently displayed (no refresh)
-    if st.button("🔊 Read Out"):
-        text_to_speech(speech_advice)
-
-st.info(display_advice)
+displ
