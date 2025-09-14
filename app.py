@@ -126,7 +126,7 @@ st.metric("Risk Level", risk.capitalize())
 
 col1, col2 = st.columns([1,1])
 with col1:
-    st.subheader("AI-Generated Advice")
+    st.subheader("### 🤖 AI-Generated Advice")
 with col2:
     if st.button("🔊 Read Out"):
         text_to_speech(llm_advice)
