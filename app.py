@@ -81,7 +81,7 @@ st.title("🍺 AI Responsible Drinking Advisor")
 
 # Sidebar Input
 st.sidebar.header("User Input")
-volume_ml = st.sidebar.number_input("Drink volume (ml)", min_value=0, value=330)
+volume_ml = st.sidebar.number_input("Drink volume (ml)", min_value=0, value=100)
 abv = st.sidebar.slider("Alcohol % (ABV)", 0.0, 50.0, 5.0)
 weight = st.sidebar.number_input("Body weight (kg)", min_value=40, max_value=150, value=70)
 gender = st.sidebar.selectbox("Gender", ["M", "F"])
@@ -121,7 +121,7 @@ speech_advice = f"{st.session_state.llm_advice}. Tip: {extra_tip}"
 st.metric("Estimated BAC (%)", f"{bac:.3f}")
 st.metric("Risk Level", risk)
 
-col1, col2 = st.columns([4,1])
+col1, col2 = st.columns([1,1])
 with col1:
     st.subheader("AI-Generated Advice")
 with col2:
