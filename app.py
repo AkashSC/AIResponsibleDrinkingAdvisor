@@ -3,23 +3,29 @@ import requests
 import json
 import os
 import base64
-from utils import advisor
+from gtts import gTTS
 
 st.title("🍺 AI Responsible Drinking Advisor")
 
-# Sidebar input
-st.sidebar.header("User Input")
-volume_ml = st.sidebar.number_input("Drink volume (ml)", min_value=0, value=330)
-abv = st.sidebar.slider("Alcohol % (ABV)", 0.0, 50.0, 5.0)
-weight = st.sidebar.number_input("Body weight (kg)", min_value=40, max_value=150, value=70)
-gender = st.sidebar.selectbox("Gender", ["M", "F"])
-hours = st.sidebar.slider("Hours since drinking started", 0.0, 12.0, 1.0)
-asked_to_drive = st.sidebar.checkbox("Asked to drive?")
+# -----------------------------
+# Core Functions
+# -----------------------------
+def grams_of_alcohol(volume_ml, abv):
+    return volume_ml * (abv / 100) * 0.789  # 0.789 g/ml is ethanol density
 
-# --- Core Calculations ---
-grams = advisor.grams_of_alcohol(volume_ml, abv)
-bac = advisor.estimate_bac_percent(grams, weight, gender, hours)
-risk = advisor.classify_risk(bac)
+def estimate_bac_percent(grams, weight, gender, hours):
+    r = 0.68 if gender == "M" else 0.55
+    bac = (grams / (weight * r)) * 100
+    bac = bac - (0.015 * hours)  # natural elimination rate
+    return max(bac, 0)
+
+def classify_risk(bac):
+    if bac < 0.03:
+        return "low"
+    elif bac < 0.08:
+        return "moderate"
+    else:
+        return "high"
 
 # -----------------------------
 # LLM Response Function (Groq)
@@ -38,7 +44,7 @@ def get_llm_response(prompt: str) -> str:
     payload = {
         "model": "llama-3.1-8b-instant",
         "messages": [
-            {"role": "system", "content": "You are a responsible drinking AI advisor. Provide safe, short, and empathetic advice (2–3 sentences max)."},
+            {"role": "system", "content": "You are a responsible drinking AI advisor. Provide short, safe, empathetic advice (2–3 sentences)."},
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.6,
@@ -48,23 +54,16 @@ def get_llm_response(prompt: str) -> str:
     try:
         response = requests.post(url, headers=headers, json=payload)
         if response.status_code != 200:
-            try:
-                err_data = response.json()
-                return f"⚠️ API Error:\n```json\n{json.dumps(err_data, indent=2)}\n```"
-            except Exception:
-                return f"⚠️ HTTP {response.status_code}: {response.text}"
-
+            return f"⚠️ API Error: {response.text}"
         data = response.json()
         return data["choices"][0]["message"]["content"]
-
     except Exception as e:
         return f"❌ Unexpected Error: {e}"
 
 # -----------------------------
-# Text-to-Speech (TTS) with gTTS
+# Text-to-Speech (TTS)
 # -----------------------------
 def text_to_speech(text: str):
-    from gtts import gTTS
     tts = gTTS(text)
     tts.save("advice.mp3")
     with open("advice.mp3", "rb") as f:
@@ -76,7 +75,27 @@ def text_to_speech(text: str):
     """
     st.markdown(audio_html, unsafe_allow_html=True)
 
-# --- Generate Automated LLM Advice ---
+# -----------------------------
+# Sidebar Input
+# -----------------------------
+st.sidebar.header("User Input")
+volume_ml = st.sidebar.number_input("Drink volume (ml)", min_value=0, value=330)
+abv = st.sidebar.slider("Alcohol % (ABV)", 0.0, 50.0, 5.0)
+weight = st.sidebar.number_input("Body weight (kg)", min_value=40, max_value=150, value=70)
+gender = st.sidebar.selectbox("Gender", ["M", "F"])
+hours = st.sidebar.slider("Hours since drinking started", 0.0, 12.0, 1.0)
+asked_to_drive = st.sidebar.checkbox("Asked to drive?")
+
+# -----------------------------
+# Calculations
+# -----------------------------
+grams = grams_of_alcohol(volume_ml, abv)
+bac = estimate_bac_percent(grams, weight, gender, hours)
+risk = classify_risk(bac)
+
+# -----------------------------
+# AI Advice (auto-updates with inputs)
+# -----------------------------
 session_summary = f"""
 Drink Volume: {volume_ml} ml
 ABV: {abv}%
@@ -97,12 +116,13 @@ Session details:
 
 llm_advice = get_llm_response(llm_advice_prompt)
 
-# --- Main Content ---
+# -----------------------------
+# Display
+# -----------------------------
 st.metric("Estimated BAC (%)", f"{bac:.3f}")
 st.metric("Risk Level", risk.capitalize())
 
-# --- AI Advice Section with button in header ---
-col1, col2 = st.columns([1,1])
+col1, col2 = st.columns([4,1])
 with col1:
     st.subheader("🤖 AI-Generated Advice")
 with col2:
@@ -110,4 +130,3 @@ with col2:
         text_to_speech(llm_advice)
 
 st.info(llm_advice)
-
