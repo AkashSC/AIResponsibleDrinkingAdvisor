@@ -2,11 +2,11 @@ import streamlit as st
 import requests
 import json
 import os
-from utils import data_loader, advisor, visualizer
+from utils import data_loader, advisor
 
 st.title("🍺 AI Responsible Drinking Advisor")
 
-# Load datasets
+# Load datasets (kept for future use, but no visuals now)
 events, sessions, users, bac_series = data_loader.load_all()
 
 # Sidebar input
@@ -87,26 +87,24 @@ def get_llm_response(prompt: str, data_summary: str = "") -> str:
     except Exception as e:
         return f"❌ Unexpected Error: {e}"
 
-# --- AI Advisor input ---
-st.sidebar.markdown("### 🤖 AI Advisor")
-user_question = st.sidebar.text_area("Ask your AI Advisor:")
-if st.sidebar.button("Get Advice"):
-    if user_question.strip():
-        data_summary = f"BAC={bac:.3f}, Risk={risk}, Weight={weight}, Gender={gender}, Hours={hours}"
-        ai_response = get_llm_response(user_question, data_summary)
-        st.sidebar.success(ai_response)
-    else:
-        st.sidebar.warning("Please enter a question before clicking Get Advisor.")
 
-# --- Display core results ---
-st.metric("Estimated BAC (%)", f"{bac:.3f}")
-st.metric("Risk Level", risk.capitalize())
-st.write("### Advice")
-st.info(advice)
+# --- Main Tabs ---
+tab1, tab2 = st.tabs(["📊 BAC & Risk Results", "🤖 AI Advisor"])
 
-# --- Visualizations ---
-st.write("### BAC Series (Sample Session)")
-visualizer.plot_bac_series(bac_series)
+with tab1:
+    st.metric("Estimated BAC (%)", f"{bac:.3f}")
+    st.metric("Risk Level", risk.capitalize())
+    st.write("### Advice")
+    st.info(advice)
 
-st.write("### Risk Distribution (Sample Events)")
-visualizer.plot_risk_distribution(events)
+with tab2:
+    st.subheader("Ask your Responsible Drinking AI Advisor")
+    user_question = st.text_area("Enter your question here:")
+    if st.button("Get AI Advice"):
+        if user_question.strip():
+            data_summary = f"BAC={bac:.3f}, Risk={risk}, Weight={weight}, Gender={gender}, Hours={hours}"
+            ai_response = get_llm_response(user_question, data_summary)
+            st.markdown("### 🔎 Advisor Response")
+            st.write(ai_response)
+        else:
+            st.warning("Please enter a question before clicking Get AI Advice.")
