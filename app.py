@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import json
 import os
+import base64
 from utils import advisor
 
 st.title("🍺 AI Responsible Drinking Advisor")
@@ -37,16 +38,15 @@ def get_llm_response(prompt: str) -> str:
     payload = {
         "model": "llama-3.1-8b-instant",
         "messages": [
-            {"role": "system", "content": "You are a responsible drinking AI advisor. Provide safe, clear, and empathetic advice based on user BAC and context."},
+            {"role": "system", "content": "You are a responsible drinking AI advisor. Provide safe, short, and empathetic advice (2–3 sentences max)."},
             {"role": "user", "content": prompt}
         ],
-        "temperature": 0.7,
-        "max_tokens": 512
+        "temperature": 0.6,
+        "max_tokens": 120
     }
 
     try:
         response = requests.post(url, headers=headers, json=payload)
-
         if response.status_code != 200:
             try:
                 err_data = response.json()
@@ -60,6 +60,21 @@ def get_llm_response(prompt: str) -> str:
     except Exception as e:
         return f"❌ Unexpected Error: {e}"
 
+# -----------------------------
+# Text-to-Speech (TTS) with gTTS
+# -----------------------------
+def text_to_speech(text: str):
+    from gtts import gTTS
+    tts = gTTS(text)
+    tts.save("advice.mp3")
+    with open("advice.mp3", "rb") as f:
+        b64_audio = base64.b64encode(f.read()).decode()
+    audio_html = f"""
+        <audio autoplay controls>
+            <source src="data:audio/mp3;base64,{b64_audio}" type="audio/mp3">
+        </audio>
+    """
+    st.markdown(audio_html, unsafe_allow_html=True)
 
 # --- Generate Automated LLM Advice ---
 session_summary = f"""
@@ -74,7 +89,7 @@ Asked to drive: {asked_to_drive}
 """
 
 llm_advice_prompt = f"""
-Based on this drinking session summary, provide safe and responsible advice.
+Based on this drinking session summary, give short and clear advice (2–3 sentences max).
 
 Session details:
 {session_summary}
@@ -89,20 +104,6 @@ st.metric("Risk Level", risk.capitalize())
 st.write("### 🤖 AI-Generated Advice")
 st.info(llm_advice)
 
-# --- Sidebar: Interactive AI Advisor ---
-st.sidebar.markdown("### Chat with AI Advisor")
-user_question = st.sidebar.text_area("Ask a question about your drinking session:")
-if st.sidebar.button("Get Advisor Response"):
-    if user_question.strip():
-        full_prompt = f"""
-        Session summary:
-        {session_summary}
-
-        Question:
-        {user_question}
-        """
-        ai_response = get_llm_response(full_prompt)
-        st.sidebar.markdown("### 🔎 Advisor Response")
-        st.sidebar.write(ai_response)
-    else:
-        st.sidebar.warning("Please enter a question before clicking.")
+# --- Button for TTS ---
+if st.button("🔊 Read Out Advice"):
+    text_to_speech(llm_advice)
